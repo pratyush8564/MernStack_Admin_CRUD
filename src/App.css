@@ -1,7 +1,7 @@
-body{
-  background-color: #E5E5E5;
+body {
+  background-color: #e5e5e5;
 }
-.sidebar{
+.sidebar {
   color: #6f6b7d;
   background: #fff;
   height: 100vh;
@@ -10,20 +10,20 @@ body{
   position: fixed;
   box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.1), 0 1px 10px 0 rgba(0, 0, 0, 0.1);
 }
-.top_section{
+.top_section {
   display: flex;
-  align-items:center;
-  padding:20px 15px;
+  align-items: center;
+  padding: 20px 15px;
 }
-.logo{
+.logo {
   font-size: 30px;
 }
-.bars{
+.bars {
   display: flex;
   font-size: 25px;
   margin-left: 50px;
 }
-.link{
+.link {
   display: flex;
   color: #6f6b7d;
   padding: 10px 15px;
@@ -31,17 +31,18 @@ body{
   transition: all 0.5s;
   text-decoration: none;
 }
-.link:hover{
-  background:linear-gradient(72.47deg, #1F485B 22.16%, #1F485B 76.47%);
+.link:hover {
+  background: linear-gradient(72.47deg, #1f485b 22.16%, #1f485b 76.47%);
   color: #fff;
   transition: all 0.5s;
-  box-shadow: 0px 2px 6px 0px rgba(115,103,240,.48);
+  box-shadow: 0px 2px 6px 0px rgba(115, 103, 240, 0.48);
 }
-.active{
-  background: linear-gradient(72.47deg, #1F485B 22.16%, #1F485B 76.47%);
+.active {
+  background: linear-gradient(72.47deg, #1f485b 22.16%, #1f485b 76.47%);
   color: #fff;
-  box-shadow: 0px 2px 6px 0px rgba(115,103,240,.48);
+  box-shadow: 0px 2px 6px 0px rgba(115, 103, 240, 0.48);
 }
-.icon, .link_text{
+.icon,
+.link_text {
   font-size: 20px;
 }

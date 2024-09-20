@@ -43,21 +43,48 @@ const createTicket = async (req, res) => {
 };
 
 const getTickets = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search = '' } = req.query;
 
-    try{
-     const totalTickets = await Ticket.find({});
+    // Convert page and limit to integers
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
 
-     if(Ticket.length === 0) {
-        return res.status(400).json({error: "No Tickets Found"})
-     }
+    // Build the search criteria
+    const searchCriteria = search ? { $or: [
+      { subject: { $regex: search, $options: 'i' } },
+      { requestBy: { $regex: search, $options: 'i' } }
+    ] } : {};
 
-     res.status(200).json({
-        data: totalTickets
-     })
-    } catch(error) {
-res.status(500).json({ error: "Internal server error" })
+    // Fetch tickets with pagination and search
+    const totalTickets = await Ticket.find(searchCriteria)
+      .skip((pageNumber - 1) * limitNumber)
+      .limit(limitNumber);
+
+    // Count total tickets for pagination info
+    const totalCount = await Ticket.countDocuments(searchCriteria);
+
+    if (totalTickets.length === 0 && totalCount > 0) {
+      return res.status(200).json({ data: totalTickets, totalCount }); // Return empty data but with count
+    } else if (totalCount === 0) {
+      return res.status(404).json({ error: "No Tickets Found" });
     }
+
+    res.status(200).json({
+      data: totalTickets,
+      totalCount,
+      pagination: {
+        total: totalCount,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(totalCount / limitNumber),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
+
 
 const updateTickets = async (req, res) => {
     try {
@@ -91,5 +118,23 @@ const updateTickets = async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
     }
   };
+
+  const deleteTicket = async (req, res) => {
+    try {
+        const ticketId = req.params.id;
+        const ticket = await Ticket.findByIdAndDelete(ticketId);
+
+        if(!ticket) {
+            return res.status(400).json({ error: "No ticket found" });
+        }
+
+        res.status(200).json({
+            message: "Ticket deleted succesfully",
+        })
+
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error"});
+    }
+  }
   
-module.exports = { createTicket, getTickets, updateTickets };
+module.exports = { createTicket, getTickets, updateTickets, deleteTicket };

@@ -1,3 +1,5 @@
+// src/pages/Dashboard.tsx
+
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Icon from "../components/icon";
@@ -5,22 +7,37 @@ import {
   closedTickets,
   createIcon,
   deleteTickets,
+  dropdownIcon,
   pendingTickets,
   totalTickets,
 } from "../components/icons";
 import Sidebar from "../components/Sidebar";
 import Table from "../components/table";
-import { getUserDetails } from "../formSlice";
+import {
+  createTicket,
+  fetchTickets,
+  getUserDetails,
+  logoutUser,
+  updateUserDetails,
+} from "../formSlice";
 import { AppDispatch, RootState } from "../store";
-import axios from "axios";
+import TicketModal from "../components/TicketModal";
+import { useNavigate } from "react-router-dom";
 
-const Dashboard = () => {
+const Dashboard: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
   const { userDetails, loading, error } = useSelector(
     (state: RootState) => state.form
   );
 
+  const navigate = useNavigate();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [profileModal, setProfileModal] = useState(false);
+  const [editModal, setEditModal] = useState(false);
+
+
+
   const [formData, setFormData] = useState({
     requestBy: "",
     subject: "",
@@ -30,12 +47,39 @@ const Dashboard = () => {
     createDate: "",
     dueDate: "",
   });
+  const [formData1, setFormData1] = useState<{
+    fullName: string;
+    profileImage: File | null;
+  }>({
+    fullName: '',
+    profileImage: null,
+  });
+
+  const [profileImageURL, setProfileImageURL] = useState<string>('src/assets/flogo.png'); // Default image
+  
+  // Effect to set initial values
+  useEffect(() => {
+    if (userDetails) {
+      setFormData1({
+        fullName: userDetails.fullName,
+        profileImage: null, // Reset to null, we'll handle URL separately
+      });
+
+      // Set the profile image URL
+      if (userDetails.profileImage) {
+        setProfileImageURL(userDetails.profileImage); // Ensure this is a string URL
+      } else {
+        setProfileImageURL('src/assets/flogo.png'); // Default image if no profileImage
+      }
+    }
+  }, [userDetails]);
+
 
   useEffect(() => {
     dispatch(getUserDetails());
   }, [dispatch]);
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevState) => ({
       ...prevState,
@@ -43,14 +87,14 @@ const Dashboard = () => {
     }));
   };
 
-  const handleFileChange = (e: any) => {
-    setFormData((prevState) => ({
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prevState: any) => ({
       ...prevState,
-      assignee: e.target.files[0], // Handle file input
+      assignee: e.target.files ? e.target.files[0] : null, // Handle file input
     }));
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = new FormData();
     form.append("requestBy", formData.requestBy);
@@ -64,12 +108,9 @@ const Dashboard = () => {
     }
 
     try {
-      await axios.post("http://localhost:3000/api/tickets", form, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await dispatch(createTicket(formData));
       setIsModalOpen(false);
+      dispatch(fetchTickets({}));
       // Optionally refresh the data or show a success message
     } catch (error) {
       console.error("Error creating ticket:", error);
@@ -77,25 +118,158 @@ const Dashboard = () => {
     }
   };
 
+  const toggleModal = () => {
+    setProfileModal(!profileModal);
+  };
+
+  // Close modal
+  const closeModal = () => {
+    setProfileModal(false);
+  };
+
+  // Close edit modal
+  const closeEditModal = () => {
+    setEditModal(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser()).unwrap();
+      localStorage.clear();
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      closeModal();
+    }
+  };
+  const handleProfile = () => {
+    // Open edit modal
+    setEditModal(true);
+    closeModal();
+  };
+
+ // Your handleEditProfile function
+ const handleEditProfile = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const { fullName, profileImage } = formData1;
+  const updatedData:any = new FormData();
+  updatedData.append('fullName', fullName);
+  if (profileImage) {
+    updatedData.append('profileImage', profileImage);
+  }
+
+  try {
+    const response = await dispatch(updateUserDetails(updatedData)).unwrap();
+    console.log("Updated user:", response.user);
+    
+    // Update local state with new user data
+    setFormData1({
+      fullName: response.user.fullName,
+      profileImage: response.user.profileImage || null,
+    });
+    setProfileImageURL(response.user.profileImage || 'src/assets/flogo.png'); // Update image URL
+    closeEditModal();
+  } catch (error) {
+    console.error("Failed to update profile:", error);
+  }
+};
+
+
+
   return (
     <div className="flex h-screen gap-4">
       <Sidebar />
-      <div className="flex-1 p-8 flex flex-col overflow-hidden">
+      <div className="flex-1 p-8 flex flex-col ">
         {/* Header */}
         <div className="flex justify-end mb-4">
           {userDetails && (
             <div className="text-right flex">
               <img
-                src="src/assets/flogo.png"
+                 src={profileImageURL} 
                 alt="Dashboard Illustration"
                 className="w-12 h-12 rounded-full"
               />
-              <p className="text-xl font-semibold mt-2 ml-2">
+              <p className="text-xl text-[#1F485B] font-semibold mt-2 ml-2">
                 {userDetails.fullName}
               </p>
+              <Icon
+                styleClass="mt-4 ml-2 cursor-pointer"
+                icon={dropdownIcon}
+                action={toggleModal}
+              />
+              {profileModal && (
+                <div
+                  className="absolute right-2 mt-10 w-32 bg-white shadow-lg rounded-lg border border-gray-200"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    onClick={handleProfile}
+                  >
+                    Profile
+                  </button>
+                  <button
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
+        {editModal && userDetails && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white rounded-lg p-6 w-80">
+              <h2 className="text-lg font-semibold mb-4">Edit Profile</h2>
+              <form onSubmit={handleEditProfile}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium">Full Name</label>
+                  <input
+                type="text"
+                value={formData1.fullName}
+                onChange={(e) => setFormData1({ ...formData1, fullName: e.target.value })}
+                className="border rounded w-full px-2 py-1"
+              />
+                </div>
+                <div className="mb-4">
+              <label className="block text-sm font-medium">Profile Picture</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    const file = e.target.files[0];
+                    setFormData1({ ...formData1, profileImage: file });
+                    const imageURL = URL.createObjectURL(file); // Create URL for preview
+                    setProfileImageURL(imageURL); // Update profile image URL
+                  }
+                }}
+                className="border rounded w-full px-2 py-1"
+              />
+            </div>
+                <div className="flex justify-between">
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="text-gray-500 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="flex gap-4 ">
@@ -145,144 +319,34 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex justify-end items-center mt-4 relative">
+        <div className="flex items-center mt-4 relative">
           <span className="relative group">
+            <div className="flex justify-between">
             <button
               className="flex items-center rounded-full bg-[#1F485B] text-white p-2 gap-2"
               onClick={() => setIsModalOpen(true)}
             >
               <Icon icon={createIcon} />
             </button>
+            </div>
             <span className="hidden group-hover:block transition-opacity duration-300 ease-in-out absolute right-12 bottom-0 transform  bg-[#1F485B] text-[#fff] text-sm font-bold rounded py-1 px-2 whitespace-nowrap opacity-0 group-hover:opacity-100">
               Create Tickets
             </span>
           </span>
         </div>
 
-        {/* Modal with Form */}
-        {isModalOpen && (
-          <div className="fixed inset-0 flex items-center justify-center z-50">
-            <div
-              className="absolute inset-0 bg-black opacity-50"
-              onClick={() => setIsModalOpen(false)}
-            ></div>
-            <div className="bg-white p-4 rounded-lg shadow-lg relative z-10 w-96">
-              <button
-                className="absolute top-2 right-2 text-gray-600"
-                onClick={() => setIsModalOpen(false)}
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  ></path>
-                </svg>
-              </button>
-              <h3 className="text-lg font-semibold mb-4">Create Ticket</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium">
-                    Request By
-                  </label>
-                  <input
-                    type="text"
-                    name="requestBy"
-                    value={formData.requestBy}
-                    onChange={handleChange}
-                    className="mt-1 p-2 border border-gray-300 rounded w-full"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Subject</label>
-                  <input
-                    type="text"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    className="mt-1 p-2 border border-gray-300 rounded w-full"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">
-                    Assignee (Image)
-                  </label>
-                  <input
-                    type="file"
-                    name="assignee"
-                    onChange={handleFileChange}
-                    className="mt-1 p-2 border border-gray-300 rounded w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Priority</label>
-                  <input
-                    type="text"
-                    name="priority"
-                    value={formData.priority}
-                    onChange={handleChange}
-                    className="mt-1 p-2 border border-gray-300 rounded w-full"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Status</label>
-                  <input
-                    type="text"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="mt-1 p-2 border border-gray-300 rounded w-full"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">
-                    Create Date
-                  </label>
-                  <input
-                    type="date"
-                    name="createDate"
-                    value={formData.createDate}
-                    onChange={handleChange}
-                    className="mt-1 p-2 border border-gray-300 rounded w-full"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Due Date</label>
-                  <input
-                    type="date"
-                    name="dueDate"
-                    value={formData.dueDate}
-                    onChange={handleChange}
-                    className="mt-1 p-2 border border-gray-300 rounded w-full"
-                    required
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="bg-blue-500 text-white px-4 py-2 rounded"
-                  >
-                    Submit
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        {/* Modal Component */}
+        <TicketModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleSubmit}
+          formData={formData}
+          handleChange={handleChange}
+          handleFileChange={handleFileChange}
+          isEditMode
+        />
 
-        {/* table component */}
+        {/* Table Component */}
         <Table />
 
         <div className="flex-grow">

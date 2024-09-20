@@ -1,8 +1,8 @@
-import  { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { loginUser, setFormData } from '../formSlice';
-import { AppDispatch, RootState } from '../store';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser, setFormData } from "../formSlice";
+import { AppDispatch, RootState } from "../store";
+import { useNavigate } from "react-router-dom";
 
 const Login: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
@@ -18,17 +18,12 @@ const Login: React.FC = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(loginUser(formData));
-  };
+   await dispatch(loginUser(formData));
+    navigate("/dashboard");
 
-  // Navigate to dashboard on successful login
-  useEffect(() => {
-    if (success && !loading) {
-      navigate("/dashboard");
-    }
-  }, [success, loading, navigate]);
+  };
 
   return (
     <div className="flex justify-center items-center h-screen p-5 bg-[#44697B]">
@@ -70,12 +65,14 @@ const Login: React.FC = () => {
               className="bg-[#1F485B] w-full rounded-lg p-3 text-white mt-8 mb-4"
               disabled={loading}
             >
-              {loading ? 'Logging In...' : 'Log In'}
+              {loading ? "Logging In..." : "Log In"}
             </button>
             {error && <p className="text-red-500">{error}</p>}
             <span className="mt-8">
-              Don’t have an Account?{' '}
-              <a href="/signup" className="text-[#1F485B]">Sign Up</a>
+              Don’t have an Account?{" "}
+              <a href="/signup" className="text-[#1F485B]">
+                Sign Up
+              </a>
             </span>
           </form>
         </div>

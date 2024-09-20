@@ -1,8 +1,9 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
 // Define interfaces
 interface FormData {
-  fullName?: string; // optional for login
+  fullName?: string; // Optional for login
   email: string;
   password: string;
 }
@@ -10,6 +11,7 @@ interface FormData {
 interface UserDetails {
   fullName: string;
   email: string;
+  profileImage?: string;// Add profileImage as optional if needed
 }
 
 interface TicketData {
@@ -36,49 +38,51 @@ interface Ticket {
 interface FormState {
   formData: FormData;
   ticketData: TicketData;
-  tickets: Ticket[]; // Add tickets array here
+  tickets: Ticket[]; // Array of tickets
   success: string | null;
   error: string | null;
   loading: boolean;
-  userDetails: UserDetails | null;
+  userDetails: UserDetails | null; // User details can be null
+  totalCount: number;
 }
 
 const initialState: FormState = {
   formData: {
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   },
   ticketData: {
-    requestBy: '',
-    subject: '',
+    requestBy: "",
+    subject: "",
     assignee: null,
-    priority: '',
-    status: '',
-    createDate: '',
-    dueDate: '',
+    priority: "",
+    status: "",
+    createDate: "",
+    dueDate: "",
   },
-  tickets: [], // Initialize as empty array
+  tickets: [], // Initialize as an empty array
   success: null,
   error: null,
   loading: false,
-  userDetails: null,
+  userDetails: null, // Initialize as null
+  totalCount: 0
 };
 
 // Define async thunk for registration
 export const registerUser = createAsyncThunk(
-  'form/registerUser',
+  "form/registerUser",
   async (formData: FormData, { rejectWithValue }) => {
     try {
-      const response = await fetch('http://localhost:3000/api/register', {
-        method: 'POST',
+      const response = await fetch("http://localhost:3000/api/register", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error("Network response was not ok");
       }
 
       return await response.json();
@@ -90,25 +94,25 @@ export const registerUser = createAsyncThunk(
 
 // Define async thunk for login
 export const loginUser = createAsyncThunk(
-  'form/loginUser',
+  "form/loginUser",
   async (formData: FormData, { rejectWithValue }) => {
     try {
-      const response = await fetch('http://localhost:3000/api/login', {
-        method: 'POST',
+      const response = await fetch("http://localhost:3000/api/login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error("Network response was not ok");
       }
 
       const data = await response.json();
       // Save token and email to local storage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('email', formData.email); // Save email for user details request
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("email", formData.email); // Save email for user details request
 
       return data;
     } catch (error: any) {
@@ -117,27 +121,54 @@ export const loginUser = createAsyncThunk(
   }
 );
 
-// Define async thunk for fetching user details
-export const getUserDetails = createAsyncThunk(
-  'form/getUserDetails',
+// Define async thunk for logout
+export const logoutUser = createAsyncThunk(
+  'auth/logoutUser',
   async (_, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('token');
-      const email = localStorage.getItem('email'); // Retrieve email from local storage
+      await axios.post(
+        'http://localhost:3000/api/logout',
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+
+      // Remove token and email from local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('email');
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Define async thunk for fetching user details
+export const getUserDetails = createAsyncThunk(
+  "form/getUserDetails",
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const email = localStorage.getItem("email"); // Retrieve email from local storage
 
       if (!token || !email) {
-        throw new Error('No token or email found');
+        throw new Error("No token or email found");
       }
 
-      const response = await fetch(`http://localhost:3000/api/userDetails?email=${email}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `http://localhost:3000/api/userDetails?email=${email}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error("Network response was not ok");
       }
 
       return await response.json();
@@ -147,29 +178,59 @@ export const getUserDetails = createAsyncThunk(
   }
 );
 
+// Update the `updateUserDetails` function in your slice
+export const updateUserDetails = createAsyncThunk(
+  'form/updateUserDetails',
+  async (formData: FormData, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("No token found");
+      }
+
+      const response = await fetch(`http://localhost:3000/api/updateProfile`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData as any, // Cast FormData to 'any'
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      return await response.json(); // Assuming the response includes updated user details
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 // Define async thunk for ticket creation
 export const createTicket = createAsyncThunk(
-  'form/createTicket',
+  "form/createTicket",
   async (ticketData: TicketData, { rejectWithValue }) => {
     const formData = new FormData();
-    formData.append('requestBy', ticketData.requestBy);
-    formData.append('subject', ticketData.subject);
-    formData.append('priority', ticketData.priority);
-    formData.append('status', ticketData.status);
-    formData.append('createDate', ticketData.createDate);
-    formData.append('dueDate', ticketData.dueDate);
+    formData.append("requestBy", ticketData.requestBy);
+    formData.append("subject", ticketData.subject);
+    formData.append("priority", ticketData.priority);
+    formData.append("status", ticketData.status);
+    formData.append("createDate", ticketData.createDate);
+    formData.append("dueDate", ticketData.dueDate);
     if (ticketData.assignee) {
-      formData.append('assigneeImage', ticketData.assignee);
+      formData.append("assigneeImage", ticketData.assignee);
     }
 
     try {
-      const response = await fetch('http://localhost:3000/api/tickets', {
-        method: 'POST',
+      const response = await fetch("http://localhost:3000/api/tickets", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error("Network response was not ok");
       }
 
       return await response.json();
@@ -181,15 +242,75 @@ export const createTicket = createAsyncThunk(
 
 // Define async thunk for fetching tickets
 export const fetchTickets = createAsyncThunk(
-  'form/fetchTickets',
-  async (_, { rejectWithValue }) => {
+  "form/fetchTickets",
+  async ({ page, limit, search }: any, { rejectWithValue }) => {
     try {
-      const response = await fetch('http://localhost:3000/api/tickets');
+      const response = await fetch(`http://localhost:3000/api/tickets?page=${page}&limit=${limit}&search=${search}`);
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        // throw new Error("Network response was not ok");
       }
       const result = await response.json();
-      return result.data; // Access `data` from API response
+      return {
+        tickets: result.data,
+        totalCount: result.totalCount, // Include totalCount from the API response
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+
+
+// Define async thunk for ticket update
+export const updateTicket = createAsyncThunk(
+  "form/updateTicket",
+  async (
+    { id, ticketData }: { id: string; ticketData: TicketData },
+    { rejectWithValue }
+  ) => {
+    const formData = new FormData();
+    formData.append("requestBy", ticketData.requestBy);
+    formData.append("subject", ticketData.subject);
+    formData.append("priority", ticketData.priority);
+    formData.append("status", ticketData.status);
+    formData.append("createDate", ticketData.createDate);
+    formData.append("dueDate", ticketData.dueDate);
+    if (ticketData.assignee) {
+      formData.append("assigneeImage", ticketData.assignee);
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/tickets/${id}`, {
+        method: "PATCH",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Define async thunk for deleting a ticket
+export const deleteTicket = createAsyncThunk(
+  "form/deleteTicket",
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/tickets/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      return id; // Return the ID of the deleted ticket
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
@@ -197,7 +318,7 @@ export const fetchTickets = createAsyncThunk(
 );
 
 const formSlice = createSlice({
-  name: 'form',
+  name: "form",
   initialState,
   reducers: {
     setFormData(state, action) {
@@ -223,7 +344,7 @@ const formSlice = createSlice({
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = 'Registration successful!';
+        state.success = "Registration successful!";
         state.formData = initialState.formData;
       })
       .addCase(registerUser.rejected, (state, action) => {
@@ -238,7 +359,7 @@ const formSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = 'User logged in successfully';
+        state.success = "User logged in successfully";
         state.formData = initialState.formData;
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -253,7 +374,7 @@ const formSlice = createSlice({
       .addCase(getUserDetails.fulfilled, (state, action) => {
         state.loading = false;
         state.userDetails = action.payload;
-        state.success = 'User details fetched successfully';
+        state.success = "User details fetched successfully";
       })
       .addCase(getUserDetails.rejected, (state, action) => {
         state.loading = false;
@@ -267,10 +388,32 @@ const formSlice = createSlice({
       })
       .addCase(createTicket.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = 'Ticket created successfully!';
+        state.success = "Ticket created successfully!";
         state.ticketData = initialState.ticketData;
       })
       .addCase(createTicket.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Ticket updating cases
+      .addCase(updateTicket.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.success = null;
+      })
+      .addCase(updateTicket.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedTicket = action.payload;
+        const index = state.tickets.findIndex(
+          (ticket) => ticket._id === updatedTicket._id
+        );
+        if (index !== -1) {
+          state.tickets[index] = updatedTicket;
+        }
+        state.success = "Ticket updated successfully!";
+        state.ticketData = initialState.ticketData;
+      })
+      .addCase(updateTicket.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
@@ -281,15 +424,55 @@ const formSlice = createSlice({
       })
       .addCase(fetchTickets.fulfilled, (state, action) => {
         state.loading = false;
-        state.tickets = action.payload;
-        state.success = 'Tickets fetched successfully';
+        state.tickets = action.payload.tickets;
+        state.totalCount = action.payload.totalCount; // Store total count
       })
       .addCase(fetchTickets.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload as string;;
+      })
+      .addCase(deleteTicket.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.success = null;
+      })
+      .addCase(deleteTicket.fulfilled, (state, action) => {
+        state.loading = false;
+        state.tickets = state.tickets.filter(
+          (ticket) => ticket._id !== action.payload
+        );
+        state.success = "Ticket deleted successfully!";
+      })
+      .addCase(deleteTicket.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(logoutUser.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.loading = false;
+        state.userDetails = null;
+      })
+      .addCase(logoutUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(updateUserDetails.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updateUserDetails.fulfilled, (state, action) => {
+        state.userDetails = action.payload.user; // Update with the updated user details
+        state.loading = false;
+      })
+      .addCase(updateUserDetails.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string; // Handle error
       });
+      
   },
 });
 
-export const { setFormData, resetForm, setTicketData, resetTicketData } = formSlice.actions;
+export const { setFormData, resetForm, setTicketData, resetTicketData } =
+  formSlice.actions;
 export default formSlice.reducer;

@@ -1,6 +1,8 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModels");
 const jwt = require("jsonwebtoken");
+const path = require('path');
+
 require('dotenv').config();
 
 const register = async (req, res) => {
@@ -112,13 +114,65 @@ const login = async (req, res) => {
       res.status(200).json({
         fullName: user.fullName,
         email: user.email,
+        profileImage: user.profileImage || null, // Include profileImage in the response
         statusCode: 200,
         status: true,
         message: "User Profile Details"
       });
     } catch (error) {
+      console.error("Error fetching user details:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   };
+  
+  const updateUserDetails = async (req, res) => {
+    try {
+      const { fullName } = req.body; // Extract fullName from the request body
+      const profileImage = req.file; // This will contain the uploaded file information
+      const email = req.user.email; // Get the user's email from the authenticated request
+  
+      // Check if profileImage was uploaded
+      const baseURL = 'http://localhost:3000/uploads/'; 
+      let updatedProfileImage = null;
+      if (profileImage) {
+        updatedProfileImage = `${baseURL}${path.basename(profileImage.path)}`; // Save the path to the uploaded file
+      }
+  
+      // Update user details in the database
+      const updatedUser = await User.findOneAndUpdate(
+        { email },
+        { fullName, profileImage: updatedProfileImage },
+        { new: true }
+      );
+  
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+  
+      // Send the updated user details back to the client
+      res.status(200).json({
+        statusCode: 200,
+        status: true,
+        user: updatedUser,
+        message: "User details updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating user details:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  };
+  
+  
+  
 
-module.exports = {register, login, getUserDetails};
+  const logout =  (req, res) => {
+
+    res.status(200).json({
+      statusCode: 200,
+      status: true,
+      message: "User logged out successfully",
+    })
+  }
+
+
+module.exports = {register, login, getUserDetails, logout, updateUserDetails};
