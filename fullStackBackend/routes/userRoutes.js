@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
 router.post("/register", register);
 router.post("/login",login);
 router.get("/userDetails", verifyToken, getUserDetails);
-router.post("/logout", verifyToken, logout)
+router.post("/logout", logout)
 router.put("/updateProfile", verifyToken,upload.single('profileImage'), updateUserDetails)
 
 module.exports = router;

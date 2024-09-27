@@ -3,7 +3,8 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { createTicket, getTickets, updateTickets, deleteTicket } = require('../controllers/ticketController');
+const { createTicket, getTickets, updateTickets, deleteTicket, getTicketCounts, getChartData } = require('../controllers/ticketController');
+const verifyToken = require('../middlewares/verifyToken');
 
 const router = express.Router();
 
@@ -21,8 +22,10 @@ const storage = multer.diskStorage({
   const upload = multer({ storage });
 
 router.post('/tickets', upload.single('assigneeImage'), createTicket);
-router.get("/tickets", getTickets);
+router.get("/tickets", verifyToken, getTickets);
 router.patch("/tickets/:id", upload.single('assigneeImage'), updateTickets);
 router.delete("/tickets/:id", deleteTicket);
+router.get("/tickets/count", verifyToken, getTicketCounts);
+router.get("/tickets/chart-data", verifyToken, getChartData);
 
 module.exports = router;

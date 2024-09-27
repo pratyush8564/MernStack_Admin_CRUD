@@ -10,10 +10,11 @@ const ticketSchema = new mongoose.Schema(
       type: String, // URL of the uploaded image
       required: false, // Image is optional
     },
-    priority: { type: String, required: true },
-    status: { type: String, required: true, enum: ["open", "closed"] },
+    priority: { type: String, required: true, enum: ["high","medium", "low"] },
+    status: { type: String, required: true, enum: ["open", "closed", "pending"] },
     createDate: { type: Date, required: true },
     dueDate: { type: Date, required: true },
+    deleted: { type: Boolean, default: false }
   },
   { timestamps: true, versionKey: false }
 );

@@ -1,6 +1,4 @@
-// src/components/ConfirmModal.tsx
 
-import React from "react";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -46,7 +44,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         <div className="flex justify-end space-x-2">
           <button
             onClick={onConfirm}
-            className="px-4 py-2 bg-red-500 text-white rounded"
+            className="px-4 py-2 bg-red text-white rounded"
           >
             Delete
           </button>

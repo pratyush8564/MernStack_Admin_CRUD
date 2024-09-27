@@ -1,4 +1,4 @@
-export const totalTickets = [
+export const totalTicketsIcon = [
   <svg
     height="50px"
     width="50px"
@@ -49,7 +49,7 @@ export const totalTickets = [
   </svg>,
 ];
 
-export const pendingTickets = [
+export const pendingTicketsIcon = [
   <svg
     height="50px"
     width="50px"
@@ -129,7 +129,7 @@ export const pendingTickets = [
   </svg>,
 ];
 
-export const closedTickets = [
+export const closedTicketsIcon = [
   <svg
     height="50px"
     width="50px"
@@ -227,7 +227,7 @@ export const closedTickets = [
   </svg>,
 ];
 
-export const deleteTickets = [
+export const deleteTicketsIcon = [
   <svg
     viewBox="-2.4 -2.4 28.80 28.80"
     fill="none"
@@ -310,7 +310,7 @@ export const actionIcon = [
   </svg>,
 ];
 
-export const createIcon = [
+export const createIcon:any = [
   <svg
     viewBox="0 0 24 24"
     height={30}

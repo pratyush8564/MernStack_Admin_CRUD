@@ -123,6 +123,7 @@ const updateTickets = async (req, res) => {
     try {
         const ticketId = req.params.id;
         const ticket = await Ticket.findByIdAndDelete(ticketId);
+        // const ticket = await Ticket.findByIdAndUpdate(ticketId, { deleted: true }, { new: true });
 
         if(!ticket) {
             return res.status(400).json({ error: "No ticket found" });
@@ -135,6 +136,45 @@ const updateTickets = async (req, res) => {
     } catch (error) {
       res.status(500).json({ error: "Internal server error"});
     }
-  }
+  };
+
+  const  getTicketCounts = async (req, res) => {
+    try {
+      const openTickets = await Ticket.countDocuments({status: 'open', deleted: false });
+      const closedTickets = await Ticket.countDocuments({ status: 'closed', deleted: false }); // Change 'closed' to your actual status for closed tickets
+      const deletedTickets = await Ticket.countDocuments({ deleted: true }); // Assuming you have a field that marks a ticket as deleted
+      const pendingTickets = await Ticket.countDocuments({ status: 'pending', deleted: false });
+      res.status(200).json({
+        openTickets,
+        closedTickets,
+        deletedTickets,
+        pendingTickets,
+      });
+    } catch (error) {
+      console.error("Error fetching ticket counts:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+
+  const getChartData = async (req, res) => {
+    try {
+ const openTickets = await Ticket.countDocuments({ status: 'open', deleted: false });
+ const closedTickets = await Ticket.countDocuments({ status: 'closed', deleted: false });
+ const pendingTickets = await Ticket.countDocuments({ status: 'pending', deleted: false});
+
+ const totalTickets = openTickets + closedTickets + pendingTickets;
+
+    const chartData = [
+      { name: 'open', y: totalTickets ? (openTickets / totalTickets) * 100 : 0 },
+      { name: 'closed', sliced: true, selected: true, y: totalTickets ? (closedTickets / totalTickets) * 100 : 0 },
+      { name: 'pending', y: totalTickets ? (pendingTickets / totalTickets) * 100 : 0 },
+    ];
+
+ res.status(200).json(chartData);
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+      res.status(500).json({error: "Internal server error"});
+    }
+  };
   
-module.exports = { createTicket, getTickets, updateTickets, deleteTicket };
+module.exports = { createTicket, getTickets, updateTickets, deleteTicket, getTicketCounts, getChartData };

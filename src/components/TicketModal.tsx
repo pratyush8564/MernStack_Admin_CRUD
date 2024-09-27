@@ -1,5 +1,3 @@
-
-
 interface TicketModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -28,6 +26,15 @@ const TicketModal: React.FC<TicketModalProps> = ({
   isEditMode,
 }: any) => {
   if (!isOpen) return null;
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+
+    // Allow empty values (backspacing)
+    if (value === "" || /^[a-zA-Z\s]*$/.test(value)) {
+      handleChange(e); // Call the original change handler
+    }
+  };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
@@ -65,7 +72,7 @@ const TicketModal: React.FC<TicketModalProps> = ({
               type="text"
               name="requestBy"
               value={formData.requestBy}
-              onChange={handleChange}
+              onChange={handleTextChange}
               className="mt-1 p-2 border border-gray-300 rounded w-full"
               required
             />
@@ -76,11 +83,23 @@ const TicketModal: React.FC<TicketModalProps> = ({
               type="text"
               name="subject"
               value={formData.subject}
-              onChange={handleChange}
+              onChange={handleTextChange}
               className="mt-1 p-2 border border-gray-300 rounded w-full"
               required
             />
           </div>
+          {formData.assignee && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium">
+                Current Assignee
+              </label>
+              <img
+                src={formData.assignee}
+                alt="Current Assignee"
+                className="rounded-full h-12 w-12 mt-1"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium">
               Assignee (Image)
@@ -89,30 +108,39 @@ const TicketModal: React.FC<TicketModalProps> = ({
               type="file"
               name="assignee"
               onChange={handleFileChange}
+              accept=".jpg,.jpeg,.png" // Restrict to jpg and png files
               className="mt-1 p-2 border border-gray-300 rounded w-full"
             />
           </div>
           <div>
             <label className="block text-sm font-medium">Priority</label>
-            <input
-              type="text"
+            <select
               name="priority"
               value={formData.priority}
               onChange={handleChange}
               className="mt-1 p-2 border border-gray-300 rounded w-full"
               required
-            />
+            >
+              <option value="">Select Priority</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium">Status</label>
-            <input
-              type="text"
+            <select
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="mt-1 p-2 border border-gray-300 rounded w-full "
+              className="mt-1 p-2 border border-gray-300 rounded w-full"
               required
-            />
+            >
+              <option value="">Select Status</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+              <option value="pending">Pending</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium">Create Date</label>

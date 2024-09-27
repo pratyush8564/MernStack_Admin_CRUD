@@ -11,7 +11,7 @@ interface FormData {
 interface UserDetails {
   fullName: string;
   email: string;
-  profileImage?: string;// Add profileImage as optional if needed
+  profileImage?: string; // Add profileImage as optional if needed
 }
 
 interface TicketData {
@@ -24,6 +24,7 @@ interface TicketData {
   dueDate: string;
 }
 
+
 interface Ticket {
   _id: string;
   requestBy: string;
@@ -33,6 +34,26 @@ interface Ticket {
   status: string;
   createDate: string;
   dueDate: string;
+}
+interface TicketCountsResponse {
+  openTickets: number;
+  closedTickets: number;
+  deletedTickets: number;
+  pendingTickets: number;
+}
+
+interface ChartDataPoint {
+  name: string; // Name of the category (e.g., "open", "closed")
+  y: number; // Percentage or count value
+  sliced?: boolean; // Optional for slicing the chart segment
+  selected?: boolean; // Optional for selecting the chart segment
+}
+
+
+interface ChartState {
+  chartData: ChartDataPoint[]; // Array of chart data points
+  loading: boolean; // Loading state
+  error: string | null; // Error message if any
 }
 
 interface FormState {
@@ -44,6 +65,11 @@ interface FormState {
   loading: boolean;
   userDetails: UserDetails | null; // User details can be null
   totalCount: number;
+  openCount: number;
+  closedCount: number;  // New property for closed tickets count
+  deletedCount: number;
+  pendingCount: number;
+  chart: ChartState;
 }
 
 const initialState: FormState = {
@@ -65,7 +91,16 @@ const initialState: FormState = {
   error: null,
   loading: false,
   userDetails: null, // Initialize as null
-  totalCount: 0
+  totalCount: 0,
+  openCount: 0,
+  closedCount: 0,    // Initialize closedCount
+  deletedCount: 0,  
+  pendingCount: 0,
+  chart: {
+    chartData: [],
+    loading: false,
+    error: null,
+  },
 };
 
 // Define async thunk for registration
@@ -105,16 +140,19 @@ export const loginUser = createAsyncThunk(
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
+     // Check if the response is ok and handle errors accordingly
+     if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Login failed");
+    }
 
       const data = await response.json();
       // Save token and email to local storage
-      localStorage.setItem("token", data.token);
+      // localStorage.setItem("token", data.token);
       localStorage.setItem("email", formData.email); // Save email for user details request
-
-      return data;
+      if (response.status === 200) {
+        return data;
+      }
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
@@ -123,22 +161,22 @@ export const loginUser = createAsyncThunk(
 
 // Define async thunk for logout
 export const logoutUser = createAsyncThunk(
-  'auth/logoutUser',
+  "auth/logoutUser",
   async (_, { rejectWithValue }) => {
     try {
       await axios.post(
-        'http://localhost:3000/api/logout',
+        "http://localhost:3000/api/logout",
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
+        // {
+        //   headers: {
+        //     Authorization: `Bearer ${localStorage.getItem("token")}`,
+        //   },
+        // }
       );
 
       // Remove token and email from local storage
-      localStorage.removeItem('token');
-      localStorage.removeItem('email');
+      localStorage.removeItem("token");
+      localStorage.removeItem("email");
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
@@ -168,7 +206,7 @@ export const getUserDetails = createAsyncThunk(
       );
 
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        // throw new Error("Network response was not ok");
       }
 
       return await response.json();
@@ -180,7 +218,7 @@ export const getUserDetails = createAsyncThunk(
 
 // Update the `updateUserDetails` function in your slice
 export const updateUserDetails = createAsyncThunk(
-  'form/updateUserDetails',
+  "form/updateUserDetails",
   async (formData: FormData, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
@@ -190,7 +228,7 @@ export const updateUserDetails = createAsyncThunk(
       }
 
       const response = await fetch(`http://localhost:3000/api/updateProfile`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -245,7 +283,21 @@ export const fetchTickets = createAsyncThunk(
   "form/fetchTickets",
   async ({ page, limit, search }: any, { rejectWithValue }) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/tickets?page=${page}&limit=${limit}&search=${search}`);
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("No token found");
+      }
+
+      const response = await fetch(
+        `http://localhost:3000/api/tickets?page=${page}&limit=${limit}&search=${search}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (!response.ok) {
         // throw new Error("Network response was not ok");
       }
@@ -259,8 +311,6 @@ export const fetchTickets = createAsyncThunk(
     }
   }
 );
-
-
 
 // Define async thunk for ticket update
 export const updateTicket = createAsyncThunk(
@@ -317,6 +367,55 @@ export const deleteTicket = createAsyncThunk(
   }
 );
 
+export const fetchTicketCounts = createAsyncThunk<TicketCountsResponse, void>(
+  'tickets/fetchCounts',
+  async () => {
+    const token = localStorage.getItem("token");
+  
+    if (!token) {
+      throw new Error("No token found");
+    }
+
+    const response = await fetch('http://localhost:3000/api/tickets/count',
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+    ); // Ensure this is the correct URL
+    
+    if (!response.ok) {
+      // throw new Error('Failed to fetch ticket counts');
+    }
+    return await response.json(); // Ensure this structure matches TicketCountsResponse
+  }
+);
+
+// Create an async thunk to fetch chart data
+export const fetchChartData = createAsyncThunk<ChartDataPoint[], void>(
+  'chart/fetchChartData',
+  async () => {
+
+    const token = localStorage.getItem("token");
+  
+    if (!token) {
+      throw new Error("No token found");
+    }
+
+
+    const response = await axios.get('http://localhost:3000/api/tickets/chart-data',
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    console.log(response, "ressss")
+    return response.data;
+  }
+);
+
 const formSlice = createSlice({
   name: "form",
   initialState,
@@ -361,6 +460,7 @@ const formSlice = createSlice({
         state.loading = false;
         state.success = "User logged in successfully";
         state.formData = initialState.formData;
+        state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -429,7 +529,7 @@ const formSlice = createSlice({
       })
       .addCase(fetchTickets.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;;
+        state.error = action.payload as string;
       })
       .addCase(deleteTicket.pending, (state) => {
         state.loading = true;
@@ -468,8 +568,34 @@ const formSlice = createSlice({
       .addCase(updateUserDetails.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string; // Handle error
+      })
+      .addCase(fetchTicketCounts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchTicketCounts.fulfilled, (state, action) => {
+        // Access the properties from action.payload
+        state.openCount = action.payload.openTickets; // Updopen
+        state.closedCount = action.payload.closedTickets; // Update closedCount
+        state.deletedCount = action.payload.deletedTickets; // Update deletedCount
+        state.pendingCount = action.payload.pendingTickets; // pending count
+        state.loading = false;
+      })
+      .addCase(fetchTicketCounts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message as string; // Ensure this is a string
+      })
+      .addCase(fetchChartData.pending, (state) => {
+        state.chart.loading = true; // Set chart loading state
+      })
+      .addCase(fetchChartData.fulfilled, (state, action) => {
+        state.chart.loading = false; // Reset loading state
+        state.chart.chartData = action.payload; // Set fetched chart data
+      })
+      .addCase(fetchChartData.rejected, (state, action) => {
+        state.chart.loading = false; // Reset loading state
+        state.chart.error = action.error.message || 'Failed to fetch chart data'; // Set error message
       });
-      
   },
 });
 

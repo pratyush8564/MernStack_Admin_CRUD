@@ -4,17 +4,18 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Icon from "../components/icon";
 import {
-  closedTickets,
+  closedTicketsIcon,
   createIcon,
-  deleteTickets,
+  deleteTicketsIcon,
   dropdownIcon,
-  pendingTickets,
-  totalTickets,
+  pendingTicketsIcon,
+  totalTicketsIcon,
 } from "../components/icons";
 import Sidebar from "../components/Sidebar";
 import Table from "../components/table";
 import {
   createTicket,
+  fetchTicketCounts,
   fetchTickets,
   getUserDetails,
   logoutUser,
@@ -23,20 +24,25 @@ import {
 import { AppDispatch, RootState } from "../store";
 import TicketModal from "../components/TicketModal";
 import { useNavigate } from "react-router-dom";
+import {jwtDecode} from 'jwt-decode';
+import { toast } from "react-toastify";
+
 
 const Dashboard: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
-  const { userDetails, loading, error } = useSelector(
+  const { userDetails,deletedCount, closedCount, pendingCount, openCount, loading, error }: any = useSelector(
     (state: RootState) => state.form
   );
 
   const navigate = useNavigate();
 
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [profileModal, setProfileModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
-
-
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 10;
 
   const [formData, setFormData] = useState({
     requestBy: "",
@@ -51,12 +57,39 @@ const Dashboard: React.FC = () => {
     fullName: string;
     profileImage: File | null;
   }>({
-    fullName: '',
+    fullName: "",
     profileImage: null,
   });
 
-  const [profileImageURL, setProfileImageURL] = useState<string>('src/assets/flogo.png'); // Default image
-  
+  const [profileImageURL, setProfileImageURL] = useState<string>(
+    "src/assets/flogo.png"
+  ); // Default image
+
+    const isTokenExpired:any = (token:any) => {
+      if (!token) return true;
+      try {
+        const decodedToken:any = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+        return decodedToken.exp < currentTime;
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        return true;
+      }
+    };
+
+
+    useEffect(() => {
+      const token = localStorage.getItem("token");
+
+      if (token) {
+        if (isTokenExpired(token)) {
+          localStorage.clear();
+          toast.error("Token Expired, Please Login Again");
+          navigate("/login");
+        } 
+      }
+    }, [userDetails]);
+
   // Effect to set initial values
   useEffect(() => {
     if (userDetails) {
@@ -69,15 +102,18 @@ const Dashboard: React.FC = () => {
       if (userDetails.profileImage) {
         setProfileImageURL(userDetails.profileImage); // Ensure this is a string URL
       } else {
-        setProfileImageURL('src/assets/flogo.png'); // Default image if no profileImage
+        setProfileImageURL("src/assets/flogo.png"); // Default image if no profileImage
       }
     }
   }, [userDetails]);
 
-
   useEffect(() => {
     dispatch(getUserDetails());
   }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchTicketCounts())
+  },[dispatch])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -92,6 +128,18 @@ const Dashboard: React.FC = () => {
       ...prevState,
       assignee: e.target.files ? e.target.files[0] : null, // Handle file input
     }));
+  };
+
+  const resetForm = () => {
+    setFormData({
+      requestBy: "",
+      subject: "",
+      assignee: null,
+      priority: "",
+      status: "",
+      createDate: "",
+      dueDate: "",
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,8 +157,10 @@ const Dashboard: React.FC = () => {
 
     try {
       await dispatch(createTicket(formData));
+      resetForm();
       setIsModalOpen(false);
-      dispatch(fetchTickets({}));
+      dispatch(fetchTickets({ page: currentPage, limit, search: searchQuery }));
+      dispatch(fetchTicketCounts());
       // Optionally refresh the data or show a success message
     } catch (error) {
       console.error("Error creating ticket:", error);
@@ -149,45 +199,43 @@ const Dashboard: React.FC = () => {
     closeModal();
   };
 
- // Your handleEditProfile function
- const handleEditProfile = async (e: React.FormEvent) => {
-  e.preventDefault();
+  // Your handleEditProfile function
+  const handleEditProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const { fullName, profileImage } = formData1;
-  const updatedData:any = new FormData();
-  updatedData.append('fullName', fullName);
-  if (profileImage) {
-    updatedData.append('profileImage', profileImage);
-  }
+    const { fullName, profileImage } = formData1;
+    const updatedData: any = new FormData();
+    updatedData.append("fullName", fullName);
+    if (profileImage) {
+      updatedData.append("profileImage", profileImage);
+    }
 
-  try {
-    const response = await dispatch(updateUserDetails(updatedData)).unwrap();
-    console.log("Updated user:", response.user);
-    
-    // Update local state with new user data
-    setFormData1({
-      fullName: response.user.fullName,
-      profileImage: response.user.profileImage || null,
-    });
-    setProfileImageURL(response.user.profileImage || 'src/assets/flogo.png'); // Update image URL
-    closeEditModal();
-  } catch (error) {
-    console.error("Failed to update profile:", error);
-  }
-};
+    try {
+      const response = await dispatch(updateUserDetails(updatedData)).unwrap();
+      console.log("Updated user:", response.user);
 
-
+      // Update local state with new user data
+      setFormData1({
+        fullName: response.user.fullName,
+        profileImage: response.user.profileImage || null,
+      });
+      setProfileImageURL(response.user.profileImage || "src/assets/flogo.png"); // Update image URL
+      closeEditModal();
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+    }
+  };
 
   return (
     <div className="flex h-screen gap-4">
       <Sidebar />
-      <div className="flex-1 p-8 flex flex-col ">
+      <div className="flex-1 p-4 ml-2 mr-2 flex flex-col ">
         {/* Header */}
         <div className="flex justify-end mb-4">
           {userDetails && (
             <div className="text-right flex">
               <img
-                 src={profileImageURL} 
+                src={profileImageURL}
                 alt="Dashboard Illustration"
                 className="w-12 h-12 rounded-full"
               />
@@ -229,28 +277,32 @@ const Dashboard: React.FC = () => {
                 <div className="mb-4">
                   <label className="block text-sm font-medium">Full Name</label>
                   <input
-                type="text"
-                value={formData1.fullName}
-                onChange={(e) => setFormData1({ ...formData1, fullName: e.target.value })}
-                className="border rounded w-full px-2 py-1"
-              />
+                    type="text"
+                    value={formData1.fullName}
+                    onChange={(e) =>
+                      setFormData1({ ...formData1, fullName: e.target.value })
+                    }
+                    className="border rounded w-full px-2 py-1"
+                  />
                 </div>
                 <div className="mb-4">
-              <label className="block text-sm font-medium">Profile Picture</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    const file = e.target.files[0];
-                    setFormData1({ ...formData1, profileImage: file });
-                    const imageURL = URL.createObjectURL(file); // Create URL for preview
-                    setProfileImageURL(imageURL); // Update profile image URL
-                  }
-                }}
-                className="border rounded w-full px-2 py-1"
-              />
-            </div>
+                  <label className="block text-sm font-medium">
+                    Profile Picture
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        const file = e.target.files[0];
+                        setFormData1({ ...formData1, profileImage: file });
+                        const imageURL = URL.createObjectURL(file); // Create URL for preview
+                        setProfileImageURL(imageURL); // Update profile image URL
+                      }
+                    }}
+                    className="border rounded w-full px-2 py-1"
+                  />
+                </div>
                 <div className="flex justify-between">
                   <button
                     type="button"
@@ -276,21 +328,21 @@ const Dashboard: React.FC = () => {
           <div className="flex-1 p-4 bg-white text-center rounded-md">
             <div className="flex gap-4">
               <div>
-                <Icon styleClass="h-4 w-4 rounded-full" icon={totalTickets} />
+                <Icon styleClass="h-4 w-4 rounded-full" icon={totalTicketsIcon} />
               </div>
               <div className="flex flex-col items-start ">
-                <p className="text-lg font-semibold">83457</p>
-                <p className="text-sm text-gray-600">Total Tickets</p>
+                <p className="text-lg font-semibold">{openCount}</p>
+                <p className="text-sm text-gray-600">Open Tickets</p>
               </div>
             </div>
           </div>
           <div className="flex-1 p-4 bg-white text-center rounded-md">
             <div className="flex gap-4">
               <div>
-                <Icon styleClass="h-4 w-4 rounded-full" icon={pendingTickets} />
+                <Icon styleClass="h-4 w-4 rounded-full" icon={pendingTicketsIcon} />
               </div>
               <div className="flex flex-col items-start ">
-                <p className="text-lg font-semibold">83457</p>
+                <p className="text-lg font-semibold">{pendingCount}</p>
                 <p className="text-sm text-gray-600">Pending Tickets</p>
               </div>
             </div>
@@ -298,10 +350,10 @@ const Dashboard: React.FC = () => {
           <div className="flex-1 p-4 bg-white text-center rounded-md">
             <div className="flex gap-4">
               <div>
-                <Icon styleClass="h-4 w-4 rounded-full" icon={closedTickets} />
+                <Icon styleClass="h-4 w-4 rounded-full" icon={closedTicketsIcon} />
               </div>
               <div className="flex flex-col items-start ">
-                <p className="text-lg font-semibold">83457</p>
+                <p className="text-lg font-semibold">{closedCount}</p>
                 <p className="text-sm text-gray-600">Closed Tickets</p>
               </div>
             </div>
@@ -309,30 +361,14 @@ const Dashboard: React.FC = () => {
           <div className="flex-1 p-4 bg-white text-center rounded-md">
             <div className="flex gap-4">
               <div>
-                <Icon styleClass="h-4 w-4 rounded-full" icon={deleteTickets} />
+                <Icon styleClass="h-4 w-4 rounded-full" icon={deleteTicketsIcon} />
               </div>
               <div className="flex flex-col items-start ">
-                <p className="text-lg font-semibold">83457</p>
+                <p className="text-lg font-semibold">{deletedCount}</p>
                 <p className="text-sm text-gray-600">Delete Tickets</p>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="flex items-center mt-4 relative">
-          <span className="relative group">
-            <div className="flex justify-between">
-            <button
-              className="flex items-center rounded-full bg-[#1F485B] text-white p-2 gap-2"
-              onClick={() => setIsModalOpen(true)}
-            >
-              <Icon icon={createIcon} />
-            </button>
-            </div>
-            <span className="hidden group-hover:block transition-opacity duration-300 ease-in-out absolute right-12 bottom-0 transform  bg-[#1F485B] text-[#fff] text-sm font-bold rounded py-1 px-2 whitespace-nowrap opacity-0 group-hover:opacity-100">
-              Create Tickets
-            </span>
-          </span>
         </div>
 
         {/* Modal Component */}
@@ -343,16 +379,36 @@ const Dashboard: React.FC = () => {
           formData={formData}
           handleChange={handleChange}
           handleFileChange={handleFileChange}
-          isEditMode
+          isEditMode={false}
+        />
+        {/* Table Component */}
+        <Table
+          icon={
+            <div className="flex items-center mt-4 relative">
+              <span className="relative group">
+                <div className="flex justify-between">
+                  <button
+                    className="flex items-center rounded-full bg-[#1F485B] text-white p-2 gap-2"
+                    onClick={() => setIsModalOpen(true)}
+                  >
+                    <Icon icon={createIcon} action={() => {}} />
+                  </button>
+                </div>
+                <span className="hidden group-hover:block transition-opacity duration-300 ease-in-out absolute right-12 bottom-0 transform  bg-[#1F485B] text-[#fff] text-sm font-bold rounded py-1 px-2 whitespace-nowrap opacity-0 group-hover:opacity-100">
+                  Create Tickets
+                </span>
+              </span>
+            </div>
+          }
+          searchQuery={searchQuery} // Pass searchQuery to the Table component
+          setSearchQuery={setSearchQuery} // Pass setSearchQuery to handle input changes
+          setCurrentPage={setCurrentPage}
         />
 
-        {/* Table Component */}
-        <Table />
-
-        <div className="flex-grow">
-          {loading && <p>Loading...</p>}
+        {/* <div className="flex-grow">
+          {loading ? <Loader /> : null}
           {error && <p className="text-red-500">{error}</p>}
-        </div>
+        </div> */}
       </div>
     </div>
   );
