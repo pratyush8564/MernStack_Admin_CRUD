@@ -1,6 +1,6 @@
 // src/pages/Dashboard.tsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Icon from "../components/icon";
 import {
@@ -76,19 +76,34 @@ const Dashboard: React.FC = () => {
         return true;
       }
     };
+    const isToastShown = useRef(false);
 
 
     useEffect(() => {
-      const token = localStorage.getItem("token");
-
-      if (token) {
-        if (isTokenExpired(token)) {
-          localStorage.clear();
-          toast.error("Token Expired, Please Login Again");
-          navigate("/login");
-        } 
-      }
-    }, [userDetails]);
+      const checkToken = async () => {
+        const token = localStorage.getItem("token");
+  
+        if (token && !isToastShown.current) {
+          if (isTokenExpired(token)) {
+            try {
+              await dispatch(logoutUser()).unwrap();
+              localStorage.clear();
+              navigate("/login");
+              
+              if (!isToastShown.current) {
+                toast.error("Token Expired, Please Login Again");
+                isToastShown.current = true; // Set the flag to prevent future toasts
+              }
+            } catch (error) {
+              console.error("Logout failed:", error);
+            }
+          }
+        }
+      };
+  
+      checkToken();
+    }, [dispatch, navigate]);
+    
 
   // Effect to set initial values
   useEffect(() => {
@@ -187,6 +202,7 @@ const Dashboard: React.FC = () => {
       await dispatch(logoutUser()).unwrap();
       localStorage.clear();
       navigate("/login");
+      toast.success("Logged Out Successfully");
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
@@ -246,7 +262,7 @@ const Dashboard: React.FC = () => {
                 styleClass="mt-4 ml-2 cursor-pointer"
                 icon={dropdownIcon}
                 action={toggleModal}
-              />
+              />  
               {profileModal && (
                 <div
                   className="absolute right-2 mt-10 w-32 bg-white shadow-lg rounded-lg border border-gray-200"

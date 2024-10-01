@@ -167,11 +167,6 @@ export const logoutUser = createAsyncThunk(
       await axios.post(
         "http://localhost:3000/api/logout",
         {},
-        // {
-        //   headers: {
-        //     Authorization: `Bearer ${localStorage.getItem("token")}`,
-        //   },
-        // }
       );
 
       // Remove token and email from local storage

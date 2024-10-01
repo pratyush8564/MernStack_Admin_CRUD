@@ -147,10 +147,10 @@ const Table = (props: any) => {
   const columns = [
     {
       name: "ID",
-      // selector: (row: any, index: any) => index + 1,
-      selector: (row: any) =>
-        (currentPage - 1) * limit + (tickets.indexOf(row) + 1),
-
+      selector: (row: any, index: any) => {
+        if (!tickets) return null; // Return null or a placeholder if tickets is undefined
+        return (currentPage - 1) * limit + (index + 1);
+      },
       sortable: true,
     },
     {
