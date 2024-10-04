@@ -12,11 +12,20 @@ import {
   pendingTicketsIcon,
   totalTicketsIcon,
 } from "../components/icons";
+import Exporting from 'highcharts/modules/exporting';
+import OfflineExporting from 'highcharts/modules/offline-exporting';
+
+// Initialize the exporting and offline exporting modules
+Exporting(Highcharts);
+OfflineExporting(Highcharts);
+
 
 const Analytics: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
 
-  const { chart, loading, error }: any = useSelector(
+  const { chart, 
+    // loading, error
+   }: any = useSelector(
     (state: RootState) => state.form
   );
 
@@ -25,6 +34,7 @@ const Analytics: React.FC = () => {
   useEffect(() => {
     dispatch(fetchChartData());
   }, [dispatch]);
+
 
   const options = {
     chart: {
@@ -98,6 +108,7 @@ const Analytics: React.FC = () => {
       text: "Tickets by Region",
       align: "left",
     },
+    
     xAxis: {
       categories: ["Africa", "America", "Asia", "Europe"],
       title: {
@@ -158,13 +169,90 @@ const Analytics: React.FC = () => {
         data: [1393, 1031, 4695, 745],
       },
     ],
+    exporting: {
+      enabled: false, // Enable exporting options
+      buttons: {
+        contextButton: {
+          menuItems: [
+            "viewFullscreen",
+            "printChart",
+            "separator",
+            "downloadPNG",
+            "downloadJPEG",
+            "downloadPDF",
+            "downloadSVG"
+          ]
+        }
+      }
+    }
   };
+
+  const lineGraphOptions = {
+    chart: {
+      type: 'line'
+  },
+  title: {
+      text: 'Monthly Average Tickets'
+  },
+
+  xAxis: {
+      categories: [
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+          'Oct', 'Nov', 'Dec'
+      ]
+  },
+  credits: {
+    enabled: false, // Disable credits for the bar chart
+  },
+  yAxis: {
+      title: {
+          text: 'Tickets (sz)'
+      }
+  },
+  plotOptions: {
+      line: {
+          dataLabels: {
+              enabled: true
+          },
+          enableMouseTracking: false
+      }
+  },
+  series: [{
+      name: 'Reggane',
+      data: [
+          16.0, 18.2, 23.1, 27.9, 32.2, 36.4, 39.8, 38.4, 35.5, 29.2,
+          22.0, 17.8
+      ]
+  }, {
+      name: 'Tallinn',
+      data: [
+          -2.9, -3.6, -0.6, 4.8, 10.2, 14.5, 17.6, 16.5, 12.0, 6.5,
+          2.0, -0.9
+      ]
+  }],
+  exporting: {
+    enabled: true, // Enable exporting options
+    buttons: {
+      contextButton: {
+        menuItems: [
+          "viewFullscreen",
+          "printChart",
+          "separator",
+          "downloadPNG",
+          "downloadJPEG",
+          "downloadPDF",
+          "downloadSVG"
+        ]
+      }
+    }
+  }
+}
 
   return (
     <div className="flex h-screen gap-16">
       <Sidebar />
-      {/* <div className="flex-1 p-4 ml-2 mr-2 flex flex-col justify-start items-center overflow-hidden"> */}
       <div>
+          {/* tickets counts and all */}
         <div className="flex justify-between mt-8 gap-4">
          <div className="bg-white p-4 rounded-lg w-full">
          <div className="flex gap-4">
@@ -213,19 +301,19 @@ const Analytics: React.FC = () => {
       
         </div>
         {/* Charts Section */}
-        <div className="flex w-full mt-6 gap-4">
-          {loading ? (
-            <p>Loading...</p>
-          ) : error ? (
-            <p>Error: {error}</p>
-          ) : (
-            <div className="">
+        <div className="w-full mt-6 ">
+            <div className="flex gap-4">
+            <div >
               <HighchartsReact highcharts={Highcharts} options={options} />
             </div>
-          )}
-          <div className="">
+       
+          <div >
             <HighchartsReact highcharts={Highcharts} options={barOptions} />
           </div>
+          </div>
+          <div className="mt-8 pb-8">
+        <HighchartsReact highcharts={Highcharts} options={lineGraphOptions} />
+      </div>
         </div>
       </div>
     </div>

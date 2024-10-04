@@ -139,6 +139,8 @@ const Table = (props: any) => {
         return "bg-[#F3FCF7] text-[#61D48A]"; // Light green background and green text
       case "closed":
         return "bg-[#FAFAFB] text-[#414258]"; // Light gray background and dark text
+        case "pending":
+          return "bg-light-peach text-red"
       default:
         return "bg-transparent text-black"; // Fallback for unknown statuses
     }
@@ -147,7 +149,7 @@ const Table = (props: any) => {
   const columns = [
     {
       name: "ID",
-      selector: (row: any, index: any) => {
+      selector: (row: any, index: any) => { 
         if (!tickets) return null; // Return null or a placeholder if tickets is undefined
         return (currentPage - 1) * limit + (index + 1);
       },
@@ -227,6 +229,23 @@ const Table = (props: any) => {
     },
   ];
 
+  const customStyles = {
+    pagination: {
+      style: {
+        border: 'none', // Removes border if needed
+      },
+      pageButtonsStyle: {
+        // backgroundColor: '#FFFFFF', // Background color of pagination buttons
+        color: '#FFFFFF', // Font color of pagination buttons
+        fill: '#1F485B', // Color of the arrow icons (forward and backward)
+        '&:hover': {
+          backgroundColor: '#D3D3D3', // Hover effect for the buttons
+          fill: '#1F485B', // Hover effect for arrow icons
+        },
+      },
+    },
+  };
+
   return (
     <div className="">
       <div className="flex gap-5">
@@ -255,6 +274,7 @@ const Table = (props: any) => {
         paginationPerPage={limit}
         onChangeRowsPerPage={handleLimitChange}
         paginationTotalRows={totalCount}
+        customStyles={customStyles} 
       />
       <TicketModal
         isOpen={isTicketModalOpen}

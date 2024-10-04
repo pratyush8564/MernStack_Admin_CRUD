@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { loginUser, setFormData } from "../formSlice";
 import { AppDispatch, RootState } from "../store";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Loader from "../components/Loader";
@@ -34,31 +34,6 @@ const Login: React.FC = () => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Simple email regex
     return emailPattern.test(email);
   };
-
-  // const isTokenExpired:any = (token:any) => {
-  //   if (!token) return true;
-  //   try {
-  //     const decodedToken:any = jwtDecode(token);
-  //     const currentTime = Date.now() / 1000;
-  //     return decodedToken.exp < currentTime;
-  //   } catch (error) {
-  //     console.error('Error decoding token:', error);
-  //     return true;
-  //   }
-  // };
-
-
-  // useEffect(() => {
-  //   const token = localStorage.getItem("token");
-
-  //   if (token) {
-  //     if (isTokenExpired(token)) {
-  //       localStorage.clear();
-  //       toast.error("Token Expired, Please Login Again");
-  //       navigate("/login");
-  //     } 
-  //   }
-  // }, []);
 
 
   // Handle form submission

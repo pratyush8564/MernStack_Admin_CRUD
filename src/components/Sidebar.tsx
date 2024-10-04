@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  FaBars,
   FaShippingFast,
   FaRegChartBar,
   FaBook,
@@ -97,6 +96,7 @@ const Sidebar = ({ children }: any) => {
       >
         {children}
       </main>
+     
     </div>
   );
 };

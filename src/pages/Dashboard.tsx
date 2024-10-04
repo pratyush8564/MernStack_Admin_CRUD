@@ -24,18 +24,22 @@ import {
 import { AppDispatch, RootState } from "../store";
 import TicketModal from "../components/TicketModal";
 import { useNavigate } from "react-router-dom";
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify";
-
 
 const Dashboard: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
-  const { userDetails,deletedCount, closedCount, pendingCount, openCount, loading, error }: any = useSelector(
-    (state: RootState) => state.form
-  );
+  const {
+    userDetails,
+    deletedCount,
+    closedCount,
+    pendingCount,
+    openCount,
+    // loading,
+    // error,
+  }: any = useSelector((state: RootState) => state.form);
 
   const navigate = useNavigate();
-
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [profileModal, setProfileModal] = useState(false);
@@ -65,45 +69,43 @@ const Dashboard: React.FC = () => {
     "src/assets/flogo.png"
   ); // Default image
 
-    const isTokenExpired:any = (token:any) => {
-      if (!token) return true;
-      try {
-        const decodedToken:any = jwtDecode(token);
-        const currentTime = Date.now() / 1000;
-        return decodedToken.exp < currentTime;
-      } catch (error) {
-        console.error('Error decoding token:', error);
-        return true;
-      }
-    };
-    const isToastShown = useRef(false);
+  const isTokenExpired: any = (token: any) => {
+    if (!token) return true;
+    try {
+      const decodedToken: any = jwtDecode(token);
+      const currentTime = Date.now() / 1000;
+      return decodedToken.exp < currentTime;
+    } catch (error) {
+      console.error("Error decoding token:", error);
+      return true;
+    }
+  };
+  const isToastShown = useRef(false);
 
+  useEffect(() => {
+    const checkToken = async () => {
+      const token = localStorage.getItem("token");
 
-    useEffect(() => {
-      const checkToken = async () => {
-        const token = localStorage.getItem("token");
-  
-        if (token && !isToastShown.current) {
-          if (isTokenExpired(token)) {
-            try {
-              await dispatch(logoutUser()).unwrap();
-              localStorage.clear();
-              navigate("/login");
-              
-              if (!isToastShown.current) {
-                toast.error("Token Expired, Please Login Again");
-                isToastShown.current = true; // Set the flag to prevent future toasts
-              }
-            } catch (error) {
-              console.error("Logout failed:", error);
+      if (token && !isToastShown.current) {
+        if (isTokenExpired(token)) {
+          try {
+            await dispatch(logoutUser()).unwrap();
+            localStorage.clear();
+            navigate("/login");
+
+            if (!isToastShown.current) {
+              toast.error("Token Expired, Please Login Again");
+              isToastShown.current = true; // Set the flag to prevent future toasts
             }
+          } catch (error) {
+            console.error("Logout failed:", error);
           }
         }
-      };
-  
-      checkToken();
-    }, [dispatch, navigate]);
-    
+      }
+    };
+
+    checkToken();
+  }, [dispatch, navigate]);
 
   // Effect to set initial values
   useEffect(() => {
@@ -127,8 +129,8 @@ const Dashboard: React.FC = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(fetchTicketCounts())
-  },[dispatch])
+    dispatch(fetchTicketCounts());
+  }, [dispatch]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -247,7 +249,9 @@ const Dashboard: React.FC = () => {
       <Sidebar />
       <div className="flex-1 p-4 ml-2 mr-2 flex flex-col ">
         {/* Header */}
-        <div className="flex justify-end mb-4">
+        <div className="flex  mb-4 justify-between  bg-white p-1">
+          <div className="flex justify-center items-center font-bold text-2xl ml-4 text-[#1F485B]">Ticket Generator</div>
+          <div>
           {userDetails && (
             <div className="text-right flex">
               <img
@@ -262,7 +266,7 @@ const Dashboard: React.FC = () => {
                 styleClass="mt-4 ml-2 cursor-pointer"
                 icon={dropdownIcon}
                 action={toggleModal}
-              />  
+              />
               {profileModal && (
                 <div
                   className="absolute right-2 mt-10 w-32 bg-white shadow-lg rounded-lg border border-gray-200"
@@ -284,6 +288,7 @@ const Dashboard: React.FC = () => {
               )}
             </div>
           )}
+          </div>
         </div>
         {editModal && userDetails && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -344,7 +349,10 @@ const Dashboard: React.FC = () => {
           <div className="flex-1 p-4 bg-white text-center rounded-md">
             <div className="flex gap-4">
               <div>
-                <Icon styleClass="h-4 w-4 rounded-full" icon={totalTicketsIcon} />
+                <Icon
+                  styleClass="h-4 w-4 rounded-full"
+                  icon={totalTicketsIcon}
+                />
               </div>
               <div className="flex flex-col items-start ">
                 <p className="text-lg font-semibold">{openCount}</p>
@@ -355,7 +363,10 @@ const Dashboard: React.FC = () => {
           <div className="flex-1 p-4 bg-white text-center rounded-md">
             <div className="flex gap-4">
               <div>
-                <Icon styleClass="h-4 w-4 rounded-full" icon={pendingTicketsIcon} />
+                <Icon
+                  styleClass="h-4 w-4 rounded-full"
+                  icon={pendingTicketsIcon}
+                />
               </div>
               <div className="flex flex-col items-start ">
                 <p className="text-lg font-semibold">{pendingCount}</p>
@@ -366,7 +377,10 @@ const Dashboard: React.FC = () => {
           <div className="flex-1 p-4 bg-white text-center rounded-md">
             <div className="flex gap-4">
               <div>
-                <Icon styleClass="h-4 w-4 rounded-full" icon={closedTicketsIcon} />
+                <Icon
+                  styleClass="h-4 w-4 rounded-full"
+                  icon={closedTicketsIcon}
+                />
               </div>
               <div className="flex flex-col items-start ">
                 <p className="text-lg font-semibold">{closedCount}</p>
@@ -377,7 +391,10 @@ const Dashboard: React.FC = () => {
           <div className="flex-1 p-4 bg-white text-center rounded-md">
             <div className="flex gap-4">
               <div>
-                <Icon styleClass="h-4 w-4 rounded-full" icon={deleteTicketsIcon} />
+                <Icon
+                  styleClass="h-4 w-4 rounded-full"
+                  icon={deleteTicketsIcon}
+                />
               </div>
               <div className="flex flex-col items-start ">
                 <p className="text-lg font-semibold">{deletedCount}</p>
@@ -400,7 +417,7 @@ const Dashboard: React.FC = () => {
         {/* Table Component */}
         <Table
           icon={
-            <div className="flex items-center mt-4 relative">
+            <div className="flex items-center mt-4  relative">
               <span className="relative group">
                 <div className="flex justify-between">
                   <button
@@ -420,6 +437,7 @@ const Dashboard: React.FC = () => {
           setSearchQuery={setSearchQuery} // Pass setSearchQuery to handle input changes
           setCurrentPage={setCurrentPage}
         />
+        <div className="pt-8"></div>
 
         {/* <div className="flex-grow">
           {loading ? <Loader /> : null}
